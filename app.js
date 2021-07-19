@@ -3,7 +3,6 @@ const path = require("path");
 const { open } = require("sqlite");
 const sqlite3 = require("sqlite3");
 
-const format = require("date-fns/format");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -180,8 +179,8 @@ const checkTweetAccess = async (request, response, next) => {
   const tweet = await db.get(checkTweet);
 
   if (tweet === undefined) {
-    response.status(400);
-    response.send("Invalid Requests");
+    response.status(401);
+    response.send("Invalid Request");
   } else {
     next();
   }
@@ -195,9 +194,9 @@ app.get(
     const { tweetId } = request.params;
     const getTweetQuery = `
   SELECT 
-  tweet.tweet,
-  COUNT(like.like_id) AS likes,
-  COUNT(reply.reply_id) AS replies,
+  tweet.tweet AS tweet,
+  COUNT(like.user_id) AS likes,
+  COUNT(reply.user_id) AS replies,
   tweet.date_time AS dateTime
   FROM
   tweet INNER JOIN like
@@ -265,9 +264,9 @@ app.get("/user/tweets/", authenticationToken, async (request, response) => {
   const userID = dbUser.user_id;
   const getUserTweetsQuery = `
   SELECT 
-  tweet.tweet,
-  COUNT(like.like_id) AS likes,
-  COUNT(reply.reply_id) AS replies,
+  tweet.tweet AS tweet,
+  COUNT(like.user_id) AS likes,
+  COUNT(reply.user_id) AS replies,
   tweet.date_time AS dateTime
   FROM
   tweet INNER JOIN like
@@ -289,9 +288,9 @@ app.post("/user/tweets/", authenticationToken, async (request, response) => {
   const dbUser = await db.get(getUserIdQuery);
   const userID = dbUser.user_id;
   const { tweet } = request.body;
-  const post_time = format(new Date(), "yyyy-MM-dd HH:mm:ss");
-  const postTweetQuery = `INSERT INTO tweet(tweet,user_id,date_time)
-  VALUES ('${tweet}',${userID},'${post_time}')`;
+  //const post_time = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+  const postTweetQuery = `INSERT INTO tweet(tweet,user_id)
+  VALUES ('${tweet}',${userID})`;
   await db.run(postTweetQuery);
   response.send("Created a Tweet");
 });
@@ -308,8 +307,8 @@ app.delete(
     const checkTweet = `SELECT * FROM tweet WHERE tweet_id = ${tweetId} AND user_id =${userId};`;
     const tweet = await db.get(checkTweet);
     if (tweet === undefined) {
-      response.status(400);
-      response.send("Invalid Requests");
+      response.status(401);
+      response.send("Invalid Request");
     } else {
       const deleteTweetQuery = `DELETE FROM tweet WHERE tweet_id = ${tweetId};`;
       await db.run(deleteTweetQuery);
